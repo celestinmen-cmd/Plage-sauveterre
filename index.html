@@ -1,0 +1,472 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Soaring Sauveterre</title>
+<meta name="description" content="Est-ce que ça vole à la plage de Sauveterre ? Vent, rafales et pluie sur 72 h (Météo-France AROME via Open-Meteo).">
+<meta name="theme-color" content="#0b5c7a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Sauveterre">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<style>
+  :root {
+    --bg: #eef4f7; --card: #ffffff; --text: #10222b; --muted: #5b6f78; --line: #d8e3e8;
+    --go: #17a34a; --go-bg: #dcfce7; --limit: #d97706; --limit-bg: #fef3c7; --no: #dc2626; --no-bg: #fee2e2;
+    --night: #e5e9ec; --accent: #0b5c7a;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0b1418; --card: #142229; --text: #e6f0f3; --muted: #92a7b0; --line: #24363e;
+      --go: #34d06b; --go-bg: #0f3a22; --limit: #f5a524; --limit-bg: #3d2c0b; --no: #f26464; --no-bg: #431818;
+      --night: #10191d; --accent: #4cb6dc;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 16px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  body { padding: env(safe-area-inset-top) 0 env(safe-area-inset-bottom); }
+  main { max-width: 640px; margin: 0 auto; padding: 12px 16px 40px; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0 10px; }
+  h1 { font-size: 1.15rem; margin: 0; }
+  h1 small { display: block; font-weight: 400; font-size: .8rem; color: var(--muted); }
+  h2 { font-size: 1rem; margin: 22px 0 8px; }
+  button { font: inherit; border: 1px solid var(--line); background: var(--card); color: var(--text);
+    border-radius: 10px; padding: 8px 12px; cursor: pointer; }
+  button:active { transform: scale(.97); }
+  .card { background: var(--card); border-radius: 16px; padding: 16px; border: 1px solid var(--line); }
+  .verdict { text-align: center; padding: 20px 16px; border-width: 2px; }
+  .verdict .big { font-size: 2rem; font-weight: 800; letter-spacing: -.5px; }
+  .verdict .why { color: var(--muted); font-size: .9rem; margin-top: 4px; }
+  .v-go { background: var(--go-bg); border-color: var(--go); } .v-go .big { color: var(--go); }
+  .v-limit { background: var(--limit-bg); border-color: var(--limit); } .v-limit .big { color: var(--limit); }
+  .v-no { background: var(--no-bg); border-color: var(--no); } .v-no .big { color: var(--no); }
+  .now-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 10px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px; text-align: center; }
+  .stat .lbl { font-size: .72rem; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+  .stat .val { font-size: 1.25rem; font-weight: 700; margin-top: 2px; }
+  .stat .unit { font-size: .75rem; font-weight: 400; color: var(--muted); }
+  .arrow { display: inline-block; transition: transform .3s; }
+  .warn { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: var(--no-bg); color: var(--no);
+    font-weight: 600; font-size: .9rem; display: none; }
+  .meta { color: var(--muted); font-size: .78rem; margin-top: 8px; text-align: center; }
+  .next { margin-top: 10px; font-size: .92rem; }
+  .next b { color: var(--go); }
+
+  .day { margin-top: 16px; }
+  .day-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700;
+    padding: 4px 2px 6px; position: sticky; top: 0; background: var(--bg); z-index: 1; }
+  .day-head span { font-weight: 400; color: var(--muted); font-size: .82rem; }
+  .slots { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .slot { font-size: .8rem; font-weight: 600; padding: 3px 8px; border-radius: 999px; }
+  .slot.go { background: var(--go-bg); color: var(--go); border: 1px solid var(--go); }
+  .slot.limit { background: var(--limit-bg); color: var(--limit); border: 1px solid var(--limit); }
+  table { width: 100%; border-collapse: separate; border-spacing: 0 3px; font-size: .9rem; }
+  th { font-size: .7rem; color: var(--muted); font-weight: 600; text-transform: uppercase; text-align: center; padding: 0 2px; }
+  td { padding: 7px 4px; text-align: center; background: var(--card); white-space: nowrap; }
+  td:first-child { border-radius: 10px 0 0 10px; font-weight: 700; border-left: 6px solid transparent; }
+  td:last-child { border-radius: 0 10px 10px 0; }
+  tr.go td { background: var(--go-bg); } tr.go td:first-child { border-left-color: var(--go); }
+  tr.limit td { background: var(--limit-bg); } tr.limit td:first-child { border-left-color: var(--limit); }
+  tr.no td:first-child { border-left-color: var(--no); }
+  tr.night td { background: var(--night); color: var(--muted); }
+  tr.now td { box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent); }
+  tr.now td:last-child { box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent), inset -2px 0 0 var(--accent); }
+  .badge { font-size: .75rem; font-weight: 700; }
+  .badge.go { color: var(--go); } .badge.limit { color: var(--limit); } .badge.no { color: var(--no); }
+  .gust-hot { color: var(--no); font-weight: 700; }
+  .rain { color: #2563eb; } @media (prefers-color-scheme: dark) { .rain { color: #7fb2ff; } }
+
+  details.settings { margin-top: 22px; }
+  details.settings summary { cursor: pointer; font-weight: 700; padding: 10px 0; }
+  .field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 10px; padding: 10px 0; border-top: 1px solid var(--line); }
+  .field label { font-size: .92rem; }
+  .field output { font-weight: 700; min-width: 70px; text-align: right; }
+  .field input[type=range] { grid-column: 1 / -1; width: 100%; accent-color: var(--accent); }
+  .field .hint { grid-column: 1 / -1; font-size: .75rem; color: var(--muted); }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); margin-top: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+  .err { background: var(--no-bg); color: var(--no); padding: 12px; border-radius: 12px; display: none; margin-bottom: 10px; }
+  footer { margin-top: 26px; font-size: .75rem; color: var(--muted); text-align: center; }
+  footer a { color: var(--accent); }
+  @media (max-width: 380px) { .now-grid { grid-template-columns: repeat(2, 1fr); } td { padding: 7px 2px; font-size: .84rem; } }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>🪂 Soaring Sauveterre<small>Plage de Sauveterre · Olonne-sur-Mer</small></h1>
+    <button id="refresh" aria-label="Actualiser">⟳</button>
+  </header>
+
+  <div id="error" class="err"></div>
+
+  <section class="card verdict" id="verdict">
+    <div class="big" id="v-big">Chargement…</div>
+    <div class="why" id="v-why">Récupération des prévisions Météo-France</div>
+  </section>
+
+  <div class="now-grid">
+    <div class="stat"><div class="lbl">Vent</div><div class="val" id="n-speed">–</div></div>
+    <div class="stat"><div class="lbl">Direction</div><div class="val" id="n-dir">–</div></div>
+    <div class="stat"><div class="lbl">Rafales</div><div class="val" id="n-gust">–</div></div>
+    <div class="stat"><div class="lbl">Pluie</div><div class="val" id="n-rain">–</div></div>
+  </div>
+  <div class="warn" id="gust-warn"></div>
+  <div class="card next" id="next" style="margin-top:10px">…</div>
+  <div class="meta" id="meta"></div>
+
+  <h2>Prochaines 72 h</h2>
+  <div class="legend">
+    <span><i style="background:var(--go)"></i>Ça vole</span>
+    <span><i style="background:var(--limit)"></i>Limite</span>
+    <span><i style="background:var(--no)"></i>Ça vole pas</span>
+    <span><i style="background:var(--night);border:1px solid var(--line)"></i>Nuit</span>
+  </div>
+  <div id="forecast"></div>
+
+  <details class="settings" id="settings">
+    <summary>⚙️ Réglages des seuils</summary>
+    <div id="fields"></div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <button id="reset">Valeurs par défaut</button>
+    </div>
+  </details>
+
+  <footer>
+    Données : <a href="https://open-meteo.com/" target="_blank" rel="noopener">Open-Meteo</a> — modèle Météo-France (AROME 1,3 km puis ARPEGE).<br>
+    Vent à 10 m. Une prévision n'est pas une observation : vérifie toujours sur place (balise, manche à air, ciel).
+  </footer>
+</main>
+
+<script>
+// Plage de Sauveterre (Olonne-sur-Mer / Les Sables-d'Olonne), accès Route de la Mer
+const SPOT = { lat: 46.5530, lon: -1.8340 };
+
+const DEFAULTS = {
+  dir: 270,       // direction idéale (°) : ouest
+  dirTol: 30,     // tolérance de direction ±°
+  minSpeed: 20,   // km/h
+  maxSpeed: 25,   // km/h
+  margin: 5,      // marge "limite" autour de la plage de vitesse (km/h)
+  gustMax: 35,    // rafales au-delà = ça vole pas (km/h)
+  gustDelta: 12,  // écart rafales - vent moyen au-delà = turbulent → limite (km/h)
+  rainMax: 0.1,   // pluie (mm/h) au-delà = pluie
+};
+
+const FIELDS = [
+  { k: 'dir', label: 'Direction idéale', min: 0, max: 355, step: 5, fmt: v => `${dirName(v)} ${v}°` },
+  { k: 'dirTol', label: 'Tolérance de direction', min: 5, max: 60, step: 5, fmt: v => `±${v}°`, hint: 'Au-delà (+15°) : ça vole pas. Entre les deux : limite.' },
+  { k: 'minSpeed', label: 'Vent minimum', min: 5, max: 40, step: 1, fmt: v => `${v} km/h` },
+  { k: 'maxSpeed', label: 'Vent maximum', min: 10, max: 50, step: 1, fmt: v => `${v} km/h` },
+  { k: 'margin', label: 'Marge « limite »', min: 0, max: 10, step: 1, fmt: v => `±${v} km/h`, hint: 'Vent un peu hors plage → limite au lieu de ça vole pas.' },
+  { k: 'gustMax', label: 'Rafales maximum', min: 15, max: 60, step: 1, fmt: v => `${v} km/h`, hint: 'Rafales au-dessus → ça vole pas (alerte rafales fortes).' },
+  { k: 'gustDelta', label: 'Écart rafales / vent', min: 4, max: 25, step: 1, fmt: v => `${v} km/h`, hint: 'Air turbulent si rafales − vent moyen dépasse cet écart → limite.' },
+  { k: 'rainMax', label: 'Pluie tolérée', min: 0, max: 1, step: 0.1, fmt: v => v == 0 ? 'aucune' : `${v} mm/h` },
+];
+
+let S = loadSettings();
+let DATA = null;
+
+function loadSettings() {
+  try { return { ...DEFAULTS, ...JSON.parse(localStorage.getItem('sauveterre-settings') || '{}') }; }
+  catch { return { ...DEFAULTS }; }
+}
+function saveSettings() {
+  try { localStorage.setItem('sauveterre-settings', JSON.stringify(S)); } catch {}
+}
+
+const DIRS = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSO','SO','OSO','O','ONO','NO','NNO'];
+function dirName(d) { return DIRS[Math.round(((d % 360) + 360) % 360 / 22.5) % 16]; }
+function angDiff(a, b) { const d = Math.abs(((a - b) % 360 + 540) % 360 - 180); return d; }
+// Flèche : le vent VIENT de `d`, il souffle donc vers d+180
+function arrow(d) { return `<span class="arrow" style="transform:rotate(${d + 180}deg)">↑</span>`; }
+const r = v => v == null ? '–' : Math.round(v);
+
+// ---------- Verdict ----------
+// level: 2 = ça vole, 1 = limite, 0 = ça vole pas
+function evaluate(h) {
+  const reasons = [];
+  let level = 2;
+  const down = (l, why) => { if (l < level) level = l; reasons.push({ l, why }); };
+
+  if (h.speed == null || h.dir == null) return { level: 0, reasons: [{ l: 0, why: 'données manquantes' }], gustAlert: false };
+
+  // Direction
+  const dd = angDiff(h.dir, S.dir);
+  if (dd > S.dirTol + 15) down(0, `vent de ${dirName(h.dir)} (trop travers)`);
+  else if (dd > S.dirTol) down(1, `vent de ${dirName(h.dir)} (un peu travers)`);
+
+  // Force
+  const lo = S.minSpeed, hi = Math.max(S.maxSpeed, S.minSpeed);
+  if (h.speed < lo - S.margin) down(0, `trop faible (${r(h.speed)} km/h)`);
+  else if (h.speed < lo) down(1, `un peu faible (${r(h.speed)} km/h)`);
+  else if (h.speed > hi + S.margin) down(0, `trop fort (${r(h.speed)} km/h)`);
+  else if (h.speed > hi) down(1, `un peu fort (${r(h.speed)} km/h)`);
+
+  // Rafales
+  let gustAlert = false;
+  if (h.gust != null) {
+    if (h.gust > S.gustMax) { down(0, `rafales fortes ${r(h.gust)} km/h`); gustAlert = true; }
+    else if (h.gust - h.speed > S.gustDelta) down(1, `air turbulent (rafales ${r(h.gust)} km/h)`);
+  }
+
+  // Pluie
+  if (h.rain != null && h.rain > S.rainMax) down(0, `pluie (${h.rain.toFixed(1)} mm)`);
+
+  // Nuit
+  if (h.isDay === 0) down(0, 'nuit');
+
+  return { level, reasons, gustAlert };
+}
+const LABEL = ['Ça vole pas', 'Limite', 'Ça vole !'];
+const CLS = ['no', 'limit', 'go'];
+
+// ---------- Données ----------
+const VARS = 'wind_speed_10m,wind_direction_10m,wind_gusts_10m,precipitation,is_day';
+function url(model) {
+  const p = new URLSearchParams({
+    latitude: SPOT.lat, longitude: SPOT.lon, timezone: 'Europe/Paris', wind_speed_unit: 'kmh',
+    hourly: VARS, current: VARS, forecast_days: 4,
+  });
+  if (model) p.set('models', model);
+  return 'https://api.open-meteo.com/v1/forecast?' + p;
+}
+async function getJSON(u) {
+  const res = await fetch(u, { cache: 'no-store' });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const j = await res.json();
+  if (j.error) throw new Error(j.reason || 'erreur API');
+  return j;
+}
+
+async function load() {
+  setLoading(true);
+  // Météo-France (AROME 1,3 km sur ~48 h puis ARPEGE) + modèle par défaut pour combler les trous
+  const [mf, std] = await Promise.allSettled([getJSON(url('meteofrance_seamless')), getJSON(url())]);
+  const main = mf.status === 'fulfilled' ? mf.value : (std.status === 'fulfilled' ? std.value : null);
+  const backup = std.status === 'fulfilled' ? std.value : null;
+  setLoading(false);
+  if (!main) {
+    showError('Impossible de récupérer les prévisions (' + (mf.reason?.message || 'réseau') + '). Vérifie ta connexion puis ⟳.');
+    return;
+  }
+  showError('');
+  DATA = merge(main, backup, mf.status === 'fulfilled');
+  render();
+}
+
+function merge(main, backup, isMF) {
+  const H = main.hourly, B = backup?.hourly;
+  const bIdx = new Map((B?.time || []).map((t, i) => [t, i]));
+  let filled = 0;
+  const pick = (key, i, t) => {
+    const v = H[key]?.[i];
+    if (v != null) return v;
+    const j = bIdx.get(t);
+    const bv = j != null ? B[key]?.[j] : null;
+    if (bv != null) filled++;
+    return bv ?? null;
+  };
+  const hours = H.time.map((t, i) => ({
+    time: t,
+    speed: pick('wind_speed_10m', i, t), dir: pick('wind_direction_10m', i, t),
+    gust: pick('wind_gusts_10m', i, t), rain: pick('precipitation', i, t), isDay: pick('is_day', i, t),
+  }));
+  const C = main.current || {}, BC = backup?.current || {};
+  const cv = k => C[k] ?? BC[k] ?? null;
+  const current = {
+    time: C.time || BC.time, speed: cv('wind_speed_10m'), dir: cv('wind_direction_10m'),
+    gust: cv('wind_gusts_10m'), rain: cv('precipitation'), isDay: cv('is_day'),
+  };
+  return { hours, current, isMF, filled, fetched: new Date() };
+}
+
+// Heure locale de Paris au format "YYYY-MM-DDTHH:00"
+function parisHourKey(d = new Date()) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('fr-FR', {
+    timeZone: 'Europe/Paris', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', hourCycle: 'h23',
+  }).formatToParts(d).map(x => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day}T${p.hour}:00`;
+}
+
+// ---------- Affichage ----------
+function render() {
+  if (!DATA) return;
+  const { hours, current } = DATA;
+  const nowKey = parisHourKey();
+  const start = Math.max(0, hours.findIndex(h => h.time >= nowKey));
+  const next72 = hours.slice(start, start + 72);
+
+  // Maintenant
+  const ev = evaluate(current);
+  const vEl = document.getElementById('verdict');
+  vEl.className = 'card verdict v-' + CLS[ev.level];
+  document.getElementById('v-big').textContent = LABEL[ev.level];
+  const bad = ev.reasons.filter(x => x.l === ev.level).map(x => x.why);
+  document.getElementById('v-why').textContent = ev.level === 2
+    ? `Vent de ${dirName(current.dir)} ${r(current.speed)} km/h, rafales ${r(current.gust)} km/h, sec`
+    : bad.join(' · ');
+
+  document.getElementById('n-speed').innerHTML = `${r(current.speed)}<span class="unit"> km/h</span>`;
+  document.getElementById('n-dir').innerHTML = current.dir == null ? '–' : `${arrow(current.dir)} ${dirName(current.dir)}<div class="unit">${r(current.dir)}°</div>`;
+  const gEl = document.getElementById('n-gust');
+  gEl.innerHTML = `${r(current.gust)}<span class="unit"> km/h</span>`;
+  gEl.className = 'val' + (current.gust > S.gustMax ? ' gust-hot' : '');
+  const raining = current.rain != null && current.rain > S.rainMax;
+  document.getElementById('n-rain').innerHTML = current.rain == null ? '–'
+    : raining ? `<span class="rain">Oui</span><div class="unit">${current.rain.toFixed(1)} mm</div>` : 'Non';
+
+  // Alerte rafales sur les 72h
+  const gusty = next72.filter(h => h.gust != null && h.gust > S.gustMax && h.isDay !== 0);
+  const warn = document.getElementById('gust-warn');
+  if (current.gust > S.gustMax) {
+    warn.style.display = 'block';
+    warn.textContent = `⚠️ Rafales fortes en ce moment : ${r(current.gust)} km/h (max réglé ${S.gustMax} km/h)`;
+  } else if (gusty.length) {
+    const g = gusty.reduce((a, b) => (b.gust > a.gust ? b : a));
+    warn.style.display = 'block';
+    warn.textContent = `⚠️ Rafales fortes prévues : jusqu'à ${r(g.gust)} km/h ${fmtDay(g.time)} ${g.time.slice(11, 13)}h`;
+  } else warn.style.display = 'none';
+
+  // Prochain créneau
+  const evs = next72.map(h => ({ h, e: evaluate(h) }));
+  const nextGo = evs.find(x => x.e.level === 2);
+  const nextLim = evs.find(x => x.e.level >= 1);
+  const goCount = evs.filter(x => x.e.level === 2).length;
+  document.getElementById('next').innerHTML = nextGo
+    ? `Prochain créneau volable : <b>${fmtDay(nextGo.h.time)} à ${nextGo.h.time.slice(11, 13)}h</b> · ${goCount} h volables sur 72 h`
+    : nextLim
+      ? `Aucun créneau idéal sur 72 h. Au mieux <b style="color:var(--limit)">limite</b> ${fmtDay(nextLim.h.time)} à ${nextLim.h.time.slice(11, 13)}h.`
+      : 'Aucun créneau volable sur les 72 prochaines heures 😕';
+
+  const fetched = DATA.fetched.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('meta').textContent =
+    `Mis à jour à ${fetched} · ${DATA.isMF ? 'Météo-France AROME/ARPEGE' : 'modèle Open-Meteo par défaut (Météo-France indisponible)'}`
+    + (DATA.filled ? ' · trous complétés par le modèle par défaut' : '');
+
+  // Tableau 72h groupé par jour
+  const byDay = new Map();
+  for (const x of evs) {
+    const d = x.h.time.slice(0, 10);
+    if (!byDay.has(d)) byDay.set(d, []);
+    byDay.get(d).push(x);
+  }
+  let html = '';
+  for (const [d, list] of byDay) {
+    const slots = slotsOf(list);
+    const goH = list.filter(x => x.e.level === 2).length;
+    html += `<div class="day"><div class="day-head">${fmtDay(d + 'T00:00', true)}<span>${goH ? goH + ' h volables' : 'pas de créneau idéal'}</span></div>`;
+    if (slots.length) html += `<div class="slots">${slots.map(s => `<span class="slot ${CLS[s.level]}">${s.level === 2 ? '✓' : '~'} ${s.from}h–${s.to}h</span>`).join('')}</div>`;
+    html += `<table><thead><tr><th>Heure</th><th>Vent</th><th>Dir.</th><th>Rafales</th><th>Pluie</th><th>Verdict</th></tr></thead><tbody>`;
+    for (const { h, e } of list) {
+      const night = h.isDay === 0;
+      const cls = night ? 'night' : CLS[e.level];
+      const isNow = h.time === nowKey ? ' now' : '';
+      const title = e.reasons.map(x => x.why).join(', ');
+      html += `<tr class="${cls}${isNow}" title="${title}">
+        <td>${h.time.slice(11, 13)}h</td>
+        <td>${r(h.speed)}</td>
+        <td>${h.dir == null ? '–' : arrow(h.dir) + ' ' + dirName(h.dir)}</td>
+        <td class="${h.gust > S.gustMax ? 'gust-hot' : ''}">${r(h.gust)}${h.gust > S.gustMax ? ' ⚠️' : ''}</td>
+        <td>${h.rain > S.rainMax ? `<span class="rain">💧${h.rain.toFixed(1)}</span>` : '–'}</td>
+        <td>${night ? '<span class="badge">🌙</span>' : `<span class="badge ${CLS[e.level]}">${e.level === 2 ? 'VOLE' : e.level === 1 ? 'LIMITE' : 'NON'}</span>`}</td>
+      </tr>`;
+    }
+    html += '</tbody></table></div>';
+  }
+  document.getElementById('forecast').innerHTML = html;
+}
+
+// Regroupe les heures consécutives volables (vert) ou limites (orange) en créneaux
+function slotsOf(list) {
+  const out = [];
+  let cur = null;
+  for (const { h, e } of list) {
+    const hr = +h.time.slice(11, 13);
+    if (e.level >= 1 && cur && cur.level === e.level && cur.toN === hr) { cur.toN = hr + 1; cur.to = hr + 1; }
+    else {
+      if (cur) out.push(cur);
+      cur = e.level >= 1 ? { level: e.level, from: hr, to: hr + 1, toN: hr + 1 } : null;
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+function fmtDay(t, long) {
+  const today = parisHourKey().slice(0, 10);
+  const d = t.slice(0, 10);
+  const dt = new Date(d + 'T12:00:00Z');
+  const tomorrow = new Date(new Date(today + 'T12:00:00Z').getTime() + 864e5).toISOString().slice(0, 10);
+  const name = dt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: long ? 'long' : 'short', timeZone: 'UTC' });
+  if (d === today) return long ? `Aujourd'hui · ${name}` : "aujourd'hui";
+  if (d === tomorrow) return long ? `Demain · ${name}` : 'demain';
+  return name.charAt(0).toUpperCase() + name.slice(1);
+}
+
+function setLoading(on) {
+  const b = document.getElementById('refresh');
+  b.disabled = on; b.style.opacity = on ? .5 : 1;
+}
+function showError(msg) {
+  const e = document.getElementById('error');
+  e.textContent = msg; e.style.display = msg ? 'block' : 'none';
+  if (msg && !DATA) {
+    document.getElementById('v-big').textContent = 'Pas de données';
+    document.getElementById('v-why').textContent = '';
+  }
+}
+
+// ---------- Réglages ----------
+function buildSettings() {
+  const box = document.getElementById('fields');
+  box.innerHTML = FIELDS.map(f => `
+    <div class="field">
+      <label for="f-${f.k}">${f.label}</label><output id="o-${f.k}"></output>
+      <input type="range" id="f-${f.k}" min="${f.min}" max="${f.max}" step="${f.step}">
+      ${f.hint ? `<div class="hint">${f.hint}</div>` : ''}
+    </div>`).join('');
+  for (const f of FIELDS) {
+    const inp = document.getElementById('f-' + f.k);
+    inp.value = S[f.k];
+    document.getElementById('o-' + f.k).textContent = f.fmt(S[f.k]);
+    inp.addEventListener('input', () => {
+      S[f.k] = parseFloat(inp.value);
+      if (f.k === 'minSpeed' && S.maxSpeed < S.minSpeed) { S.maxSpeed = S.minSpeed; syncField('maxSpeed'); }
+      if (f.k === 'maxSpeed' && S.minSpeed > S.maxSpeed) { S.minSpeed = S.maxSpeed; syncField('minSpeed'); }
+      document.getElementById('o-' + f.k).textContent = f.fmt(S[f.k]);
+      saveSettings(); render();
+    });
+  }
+}
+function syncField(k) {
+  const f = FIELDS.find(x => x.k === k);
+  document.getElementById('f-' + k).value = S[k];
+  document.getElementById('o-' + k).textContent = f.fmt(S[k]);
+}
+document.getElementById('reset').addEventListener('click', () => {
+  S = { ...DEFAULTS }; saveSettings(); buildSettings(); render();
+});
+
+// ---------- Rafraîchissement ----------
+document.getElementById('refresh').addEventListener('click', load);
+// Recharge à chaque retour sur l'app (ouverture depuis l'écran d'accueil) et toutes les 15 min
+let lastLoad = 0;
+function maybeReload() { if (Date.now() - lastLoad > 60e3) { lastLoad = Date.now(); load(); } }
+document.addEventListener('visibilitychange', () => { if (!document.hidden) maybeReload(); });
+window.addEventListener('pageshow', e => { if (e.persisted) maybeReload(); });
+setInterval(() => { if (!document.hidden) { lastLoad = Date.now(); load(); } }, 15 * 60e3);
+
+buildSettings();
+lastLoad = Date.now();
+load();
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+</script>
+</body>
+</html>
