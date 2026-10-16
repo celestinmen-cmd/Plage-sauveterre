@@ -1,6 +1,6 @@
 // Service worker : l'app s'ouvre même hors ligne, mais les prévisions sont toujours
 // récupérées en direct (jamais mises en cache).
-const CACHE = 'sauveterre-v1';
+const CACHE = 'sauveterre-v2';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon.svg', 'icon-180.png', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', e => {
